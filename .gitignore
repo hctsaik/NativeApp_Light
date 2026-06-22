@@ -1,0 +1,22 @@
+# ── Rust / Tauri build ──
+5_PG_Develop/src-tauri/target/
+5_PG_Develop/src-tauri/gen/
+
+# ── Node ──
+node_modules/
+5_PG_Develop/node_modules/
+
+# ── E2E 測試產物(隔離實例 WebView2 user-data / log / 報告,皆可重生)──
+5_PG_Develop/e2e/runs/
+5_PG_Develop/e2e/reports/
+5_PG_Develop/e2e-screenshot*.png
+
+# ── Logs / 執行期產物 ──
+**/logs/
+*.log
+**/data/tools.sqlite
+selected_paths.json
+
+# ── OS ──
+Thumbs.db
+.DS_Store

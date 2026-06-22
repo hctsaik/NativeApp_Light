@@ -1,0 +1,60 @@
+name: CI
+
+# 單元/整合測試閘門:shim(vitest)+ sidecar(cargo test)。
+# 真實 E2E(Playwright→WebView2)需 GUI + 跑得起的 engine.py,不適合無頭 CI;
+# 在本機或 self-hosted Windows runner 跑 `npm run e2e`(見 5_PG_Develop/e2e/)。
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install JS deps
+        working-directory: 5_PG_Develop
+        run: npm install
+
+      - name: Vitest — cimHost shim 單元測試
+        working-directory: 5_PG_Develop
+        run: npm test
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            5_PG_Develop/src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('5_PG_Develop/src-tauri/Cargo.lock') }}
+
+      # 真 portal 在另一個 repo;CI 只需一個非空 dist 讓 tauri generate_context! 能編譯。
+      # 正式打包請改用本地 frontendDist + beforeBuildCommand 建 portal(見 SIGNING.md / ROADMAP)。
+      - name: Stub frontendDist
+        shell: pwsh
+        run: |
+          $d = "../nativeApp/apps/portal-react/dist"
+          New-Item -ItemType Directory -Force $d | Out-Null
+          '<!doctype html><html><head><meta charset="utf-8"><title>stub</title></head><body><div id="root"></div></body></html>' | Out-File "$d/index.html" -Encoding utf8
+
+      - name: Cargo test — sidecar 單元測試
+        working-directory: 5_PG_Develop/src-tauri
+        run: cargo test --locked
+
+  # 完整 Tauri 安裝包 + 簽章(手動觸發;需真 portal dist 與簽章 secret,見 SIGNING.md）
+  build-bundle:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "TODO: 取真 portal dist(checkout nativeApp 或 artifact)→ npx tauri build → 用 CI secret 的憑證簽(bundle.windows.signCommand)。骨架見 SIGNING.md。"
